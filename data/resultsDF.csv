@@ -1,0 +1,8 @@
+,Clustering Algorithm,Performance
+0,KMeans Clustering,0.21595330739299612
+1,Agglomerative Clustering,0.20817120622568094
+2,Affinity Propagation Clustering,0.13424124513618677
+3,Spectral Clustering,0.22568093385214008
+4,Birch Clustering,0.2198443579766537
+5,DBSCAN Clustering,0.245136186770428
+6,MeanShift Clustering,0.23151750972762647
