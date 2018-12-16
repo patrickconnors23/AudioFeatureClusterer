@@ -73,31 +73,35 @@ class AudioCluster():
         clusters = [group for _, group in groupedDF]
         numSongs = sum([len(p) for p in playlists])
 
-        numOverlap, increased = 0, True
-        while len(playlists) > 0 and len(clusters) > 0 and increased:
-            maxOverlap, pIDX, gIDX, increased = 0, None, None, False
+        numOverlap, maxOverlap = 0, 1
+        while len(playlists) > 0 and len(clusters) > 0 and maxOverlap > 0:
+            maxOverlap, pIDX, gIDX = 0, None, None
             for i, playlist in enumerate(playlists):
                 for j, c in enumerate(clusters):
                     overlap = calcOverlap(playlist, c)
                     if overlap > maxOverlap:
-                        increased = True
                         maxOverlap, pIDX, gIDX = overlap, i, j
             
-            # print(maxOverlap, len(playlists), len(clusters))
             if maxOverlap > 0:
                 playlists.pop(pIDX)
                 clusters.pop(gIDX)
                 numOverlap += maxOverlap
 
-        performancePercentage = round(float(numOverlap) / float(numSongs), 4) * 100
+        performance = float(numOverlap) / float(numSongs)
+        performancePercentage = round(performance) * 100
 
         print()
         print(f"The {cluster} method resulted in {performancePercentage}% of songs being correctly grouped")
+        return {
+            "Clustering Algorithm": cluster,
+            "Performance": performance
+        }
         
 
     def analyzeResults(self):
-        for c in self.clusterLabels:
-            self.analyzeClusterPerformance(c)
+        results = [self.analyzeClusterPerformance(c) for c in self.clusterLabels]
+        rDF = pd.DataFrame(results)
+        rDF.to_csv("data/resultsDF.csv")
 
 if __name__ == "__main__":
     AC = AudioCluster(processData=False)
