@@ -3,80 +3,105 @@ from pprint import pprint as pp
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+from util.helpers import gatherData, gatherPlaylistData
+from models.clusterers import Clusterers
 
-if __name__ == "__main__":
-    sp = SPOTICLI()
-    playlists = pd.read_pickle("playlists.pkl")
-    tracks = pd.read_pickle("tracks.pkl")
-    playlists = playlists.iloc[:10]
-
-    trackSet = set()
-
-    def addURI(playlist):
-        return ["spotify:track:"+track for track in playlist]
-
-    playlists = [addURI(p["tracks"]) for _, p in playlists.iterrows()]
-
-
-    def getTrackSet(allPlaylists):
-        tracksLst = []
-        for lst in allPlaylists: tracksLst += lst
-        trackLst = list(set(tracksLst))
-        return ["spotify:track:"+x for x in tracksLst]
+class AudioCluster():
+    def __init__(self, processData):
+        self.playlists = self.readPlaylistData()
+        self.audioDF = self.readAudioData(shouldProcess=processData)
+        self.clusterLabels = []
+        self.models = Clusterers(k=len(self.playlists))
     
-    allTracks = getTrackSet(playlists)
-
-    # Get audio features
-    i = 0
-    j = min(len(allTracks), 100)
-    audioMaster = []
-    while i < len(allTracks):
-        trackSlice = allTracks[i:j]
-        audio = sp.getAudioF(trackSlice)
-        audioMaster += audio
-        i = j
-        j = min(j + 100, len(allTracks))
-
-    audioDF = pd.DataFrame.from_dict(audioMaster)
-
-    intCols = ["acousticness",	
-        "danceability",
-        "duration_ms",
-        "energy",
-        "instrumentalness",
-        "liveness",
-        "loudness",
-        "mode",
-        "speechiness",
-        "tempo",
-        "time_signature",
-        "valence"]
-
-    URIs = audioDF["uri"]
-    audioDF = audioDF[intCols]
-    scaler = StandardScaler()
-    scaler.fit(audioDF)
-    audioDF = scaler.transform(audioDF)
-    audioDF = pd.DataFrame(audioDF, columns=intCols)
+    def readPlaylistData(self):
+        return gatherPlaylistData(10)
     
-    clusterer = KMeans(n_clusters=len(playlists))
-    clusterer.fit(audioDF)
-    groups = clusterer.predict(audioDF)
-    audioDF["cluster"] = groups
-    audioDF["uri"] = URIs
-    
-    groupedDF = audioDF.groupby("cluster")
+    def readAudioData(self, shouldProcess):
+        if shouldProcess:
+            return gatherData(self.playlists) 
+        else:
+            return pd.read_pickle("data/audioDF.pkl")
 
-    groupSizes, overlaps = [], []
-    for _, group in groupedDF:
-        def overlap(playlist, group):
+    def predictClusters(self, df, k):
+        self.models.fitModels(df)
+        return self.models.predict()
+    
+    def processAndCluster(self):
+        intCols = ["acousticness",	
+            "danceability",
+            "duration_ms",
+            "energy",
+            "instrumentalness",
+            "liveness",
+            "loudness",
+            "mode",
+            "speechiness",
+            "tempo",
+            "time_signature",
+            "valence"]
+
+        def scaleData(df, cols):
+            df = df[cols].astype(float)
+            scaler = StandardScaler()
+            scaler.fit(df)
+            df = scaler.transform(df)
+            return pd.DataFrame(df, columns=cols)
+        
+        URIs = self.audioDF["uri"]
+
+        # scale data
+        self.audioDF = scaleData(self.audioDF, intCols)
+        
+        # add cluster tag
+        clusterTags = self.predictClusters(self.audioDF, len(self.playlists))
+        for ct in clusterTags:
+            self.clusterLabels.append(ct["label"])
+            self.audioDF[ct["label"]] = ct["predictions"]
+
+        self.audioDF["uri"] = URIs
+    
+    def analyzeClusterPerformance(self, cluster):
+        def calcOverlap(playlist, group):
             urls = set(group["uri"].values)
             playlist = set(playlist)
             return len(urls & playlist)
-        overlap = list(map(lambda x: overlap(x, group), playlists))
-        groupSizes.append(len(group))
-        overlaps.append(max(overlap))
-    for over, total in zip(overlaps, groupSizes):
-        print(float(over) / float(total))
+
+        groupedDF = self.audioDF.groupby(cluster)
+        playlists = list(self.playlists)
+
+        clusters = [group for _, group in groupedDF]
+        numSongs = sum([len(p) for p in playlists])
+
+        numOverlap, increased = 0, True
+        while len(playlists) > 0 and len(clusters) > 0 and increased:
+            maxOverlap, pIDX, gIDX, increased = 0, None, None, False
+            for i, playlist in enumerate(playlists):
+                for j, c in enumerate(clusters):
+                    overlap = calcOverlap(playlist, c)
+                    if overlap > maxOverlap:
+                        increased = True
+                        maxOverlap, pIDX, gIDX = overlap, i, j
+            
+            # print(maxOverlap, len(playlists), len(clusters))
+            if maxOverlap > 0:
+                playlists.pop(pIDX)
+                clusters.pop(gIDX)
+                numOverlap += maxOverlap
+
+        performancePercentage = round(float(numOverlap) / float(numSongs), 4) * 100
+
+        print()
+        print(f"The {cluster} method resulted in {performancePercentage}% of songs being correctly grouped")
+        
+
+    def analyzeResults(self):
+        for c in self.clusterLabels:
+            self.analyzeClusterPerformance(c)
+
+if __name__ == "__main__":
+    AC = AudioCluster(processData=False)
+    print("Clustering data...")
+    AC.processAndCluster()
+    print("Analyzing results...")
+    AC.analyzeResults()

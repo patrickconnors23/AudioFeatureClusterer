@@ -25,6 +25,3 @@ class SPOTICLI():
         """
         # print(TIDs)
         return self.SPOTIFY.audio_features(TIDs)
-
-if __name__ == "__main__":
-    pass
