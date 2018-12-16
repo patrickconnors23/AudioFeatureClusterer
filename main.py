@@ -4,15 +4,16 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from util.helpers import gatherData, gatherPlaylistData
+from util.helpers import gatherData, gatherPlaylistData, analyzeMetricsDF
 from models.clusterers import Clusterers
 
 class AudioCluster():
-    def __init__(self, processData):
+    def __init__(self, processData=True):
         self.playlists = self.readPlaylistData()
         self.audioDF = self.readAudioData(shouldProcess=processData)
         self.clusterLabels = []
         self.models = Clusterers(k=len(self.playlists))
+        self.resultList = []
     
     def readPlaylistData(self):
         return gatherPlaylistData(10)
@@ -28,6 +29,7 @@ class AudioCluster():
         return self.models.predict()
     
     def processAndCluster(self):
+        print("Clustering data...")
         intCols = ["acousticness",	
             "danceability",
             "duration_ms",
@@ -88,24 +90,37 @@ class AudioCluster():
                 numOverlap += maxOverlap
 
         performance = float(numOverlap) / float(numSongs)
-        performancePercentage = round(performance) * 100
+        performancePercentage = round(performance, 4) * 100
 
-        print()
-        print(f"The {cluster} method resulted in {performancePercentage}% of songs being correctly grouped")
         return {
             "Clustering Algorithm": cluster,
             "Performance": performance
         }
-        
 
     def analyzeResults(self):
+        print("Analyzing results...")
         results = [self.analyzeClusterPerformance(c) for c in self.clusterLabels]
         rDF = pd.DataFrame(results)
-        rDF.to_csv("data/resultsDF.csv")
+        self.resultList.append(rDF)
+    
+    def reInitAndRun(self):
+        print("running Iteration")
+        self.playlists = self.readPlaylistData()
+        self.audioDF = self.readAudioData(shouldProcess=True)
+        self.clusterLabels = []
+        self.models = Clusterers(k=len(self.playlists))
+        self.processAndCluster()
+        self.analyzeResults()
+    
+    def prepareAccumulatedMetrics(self):
+        displayDF = analyzeMetricsDF(self.resultList)
+        displayDF.to_csv("data/results.csv")
 
 if __name__ == "__main__":
-    AC = AudioCluster(processData=False)
-    print("Clustering data...")
+    AC = AudioCluster(processData=True)
     AC.processAndCluster()
-    print("Analyzing results...")
     AC.analyzeResults()
+    for _ in range(15):
+        AC.reInitAndRun()
+    AC.prepareAccumulatedMetrics()
+    

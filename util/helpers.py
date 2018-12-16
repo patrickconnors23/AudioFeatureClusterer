@@ -1,3 +1,4 @@
+import random
 from spoticli import SPOTICLI
 import pandas as pd
 import numpy as np
@@ -5,15 +6,17 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 
 def gatherPlaylistData(numPlaylists):
+    # print("Reading data")
     playlists = pd.read_pickle("playlists.pkl")
-    playlists = playlists.iloc[:numPlaylists]
+    i = random.randint(0, len(playlists) - numPlaylists)
+    playlists = playlists.iloc[i:i+numPlaylists]
 
     def addURI(playlist):
         return ["spotify:track:"+track for track in playlist]
 
     return [addURI(p["tracks"]) for _, p in playlists.iterrows()]
 
-def gatherData(playlist):
+def gatherData(playlists):
     sp = SPOTICLI()
     trackSet = set()
 
@@ -37,42 +40,14 @@ def gatherData(playlist):
         j = min(j + 100, len(allTracks))
 
     audioDF = pd.DataFrame.from_dict(audioMaster)
-
-    # intCols = ["acousticness",	
-    #     "danceability",
-    #     "duration_ms",
-    #     "energy",
-    #     "instrumentalness",
-    #     "liveness",
-    #     "loudness",
-    #     "mode",
-    #     "speechiness",
-    #     "tempo",
-    #     "time_signature",
-    #     "valence"]
-
-    # def scaleData(df, cols):
-    #     df = df[cols]
-    #     scaler = StandardScaler()
-    #     scaler.fit(df)
-    #     df = scaler.transform(df)
-    #     return pd.DataFrame(df, columns=cols)
-    
-    # def predictClusters(df, k):
-    #     clusterer = KMeans(n_clusters=k)
-    #     clusterer.fit(df)
-    #     return clusterer.predict(df)
-
-    # URIs = audioDF["uri"]
-
-    # # scale data
-    # audioDF = scaleData(audioDF, intCols)
-    
-    # # add cluster tag
-    # clusterTags = predictClusters(audioDF, len(playlists))
-
-    # # Add back columns
-    # audioDF["cluster"] = clusterTags
-    # audioDF["uri"] = URIs
     audioDF.to_pickle("data/audioDF.pkl")
     return audioDF
+
+def analyzeMetricsDF(dfList):
+    df, rest = dfList[0], dfList[1:]
+    df = df.set_index("Clustering Algorithm")
+    df.columns = ["Results 1"]
+    for trialDF in rest:
+        df["Results " + str(len(df.columns) + 1)] = list(trialDF["Performance"])
+    df["Mean Scores"] = df.mean(axis=1)
+    return df
