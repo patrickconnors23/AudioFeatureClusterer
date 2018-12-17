@@ -2,6 +2,7 @@ import argparse
 
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 
 from util.helpers import gatherData, gatherPlaylistData, analyzeMetricsDF
@@ -54,7 +55,6 @@ class AudioCluster():
         Process track data to format that can be clustered
         Run clustering algorithms on track data
         """
-        print("Clustering data...")
         intCols = ["acousticness",	
             "danceability",
             "duration_ms",
@@ -129,7 +129,6 @@ class AudioCluster():
         """
         Evaluate all model's performance on current set of playlists
         """
-        print("Analyzing results...")
         results = [self.analyzeClusterPerformance(c) for c in self.clusterLabels]
         rDF = pd.DataFrame(results)
         self.resultList.append(rDF)
@@ -138,7 +137,6 @@ class AudioCluster():
         """
         Run all clustering algorithms again on different set of playlists
         """
-        print("running Iteration")
         self.playlists = self.readPlaylistData()
         self.audioDF = self.readAudioData(shouldProcess=True)
         self.clusterLabels = []
@@ -171,7 +169,8 @@ if __name__ == "__main__":
     AC.analyzeResults()
 
     # Reapt steps arbitrary number of times.
-    for _ in range(numTrials):
+    print("Running trials")
+    for _ in tqdm(range(numTrials)):
         AC.reInitAndRun()
     
     # Evaluate experiments
