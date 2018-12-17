@@ -9,7 +9,7 @@ Library playlist generator that relies on track audio features; follow the below
 
 After cloning our repo, ensure that you have python=3.6.* installed.
 
-Install the requirements with `pip3 install requirements.txt`
+Install the requirements with `pip3 install -r requirements.txt`
 
 ## Usage
 
