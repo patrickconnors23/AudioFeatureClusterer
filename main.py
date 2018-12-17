@@ -1,6 +1,9 @@
+import argparse
+
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+
 from util.helpers import gatherData, gatherPlaylistData, analyzeMetricsDF
 from models.clusterers import Clusterers
 
@@ -152,6 +155,14 @@ class AudioCluster():
         displayDF.to_csv("data/results.csv")
 
 if __name__ == "__main__":
+    # Read CLA
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--numTrials')
+    args = parser.parse_args()
+    if args.numTrials:
+        numTrials = int(args.numTrials)
+    else:
+        numTrials = 10
     # Init audio class
     AC = AudioCluster(processData=True)
 
@@ -160,7 +171,7 @@ if __name__ == "__main__":
     AC.analyzeResults()
 
     # Reapt steps arbitrary number of times
-    for _ in range(10):
+    for _ in range(numTrials):
         AC.reInitAndRun()
     
     # Evaluate experiments

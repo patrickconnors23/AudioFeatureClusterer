@@ -1,11 +1,15 @@
 # AudioFeatureClusterer
 
-## Overview
 
-Playlist reccomendation agent trained using reinforcement learning and KNN Clustering
+Library playlist generator that relies on track audio features; follow the below instructions to replicate our results
 
-## Setup
 
-Create a conda environment (https://conda.io/docs/user-guide/tasks/manage-environments.html) running python 3.6. Install keras, sklearn, etc.
+## Setup & Installation
 
-Run with `python main.py`
+After cloning our repo, ensure that you have python=3.6.* installed.
+
+Install the requirements with `pip3 install requirements.txt`
+
+## Usage
+
+Simply run `python3 main.py --numTrials=x` where `x` is the desired number of tests to run. This will test our models on various sample "song libraries."
