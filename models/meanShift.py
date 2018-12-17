@@ -1,6 +1,9 @@
 from sklearn.cluster import MeanShift
 
 class meanShift():
+    """
+    https://scikit-learn.org/stable/modules/generated/sklearn.cluster.MeanShift.html#sklearn.cluster.MeanShift
+    """
     def __init__(self, k):
         self.model = MeanShift()
         self.name = "MeanShift Clustering"

@@ -1,6 +1,3 @@
-from spoticli import SPOTICLI
-from pprint import pprint as pp
-from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -8,6 +5,18 @@ from util.helpers import gatherData, gatherPlaylistData, analyzeMetricsDF
 from models.clusterers import Clusterers
 
 class AudioCluster():
+    """
+    Args:
+        processData (bool): determines whether to read audio features or hit spotify API
+
+    Attributes:
+        NNC (NNeighClassifier): NNeighbor Classifier used for predictions
+        playlists ([playlist]): list of spotify playlist objects
+        audioDF (DataFrame): audio features of all songs in playlists
+        clusterLabels (str[]): labels for all clustering algos used
+        models (sklearn.model[]): list of all clustering algo objects
+        resultList (DataFrame[]): results of each trial
+    """
     def __init__(self, processData=True):
         self.playlists = self.readPlaylistData()
         self.audioDF = self.readAudioData(shouldProcess=processData)
@@ -16,19 +25,32 @@ class AudioCluster():
         self.resultList = []
     
     def readPlaylistData(self):
+        """
+        Read in playlist data
+        """
         return gatherPlaylistData(10)
     
     def readAudioData(self, shouldProcess):
+        """
+        Request audio features from spotify for all tracks in playlist
+        """
         if shouldProcess:
             return gatherData(self.playlists) 
         else:
             return pd.read_pickle("data/audioDF.pkl")
 
     def predictClusters(self, df, k):
+        """
+        Get each model's predictions for each songs cluster
+        """
         self.models.fitModels(df)
         return self.models.predict()
     
     def processAndCluster(self):
+        """
+        Process track data to format that can be clustered
+        Run clustering algorithms on track data
+        """
         print("Clustering data...")
         intCols = ["acousticness",	
             "danceability",
@@ -64,6 +86,9 @@ class AudioCluster():
         self.audioDF["uri"] = URIs
     
     def analyzeClusterPerformance(self, cluster):
+        """
+        Compare playlist groups to groups chosen by cluster
+        """
         def calcOverlap(playlist, group):
             urls = set(group["uri"].values)
             playlist = set(playlist)
@@ -98,12 +123,18 @@ class AudioCluster():
         }
 
     def analyzeResults(self):
+        """
+        Evaluate all model's performance on current set of playlists
+        """
         print("Analyzing results...")
         results = [self.analyzeClusterPerformance(c) for c in self.clusterLabels]
         rDF = pd.DataFrame(results)
         self.resultList.append(rDF)
     
     def reInitAndRun(self):
+        """
+        Run all clustering algorithms again on different set of playlists
+        """
         print("running Iteration")
         self.playlists = self.readPlaylistData()
         self.audioDF = self.readAudioData(shouldProcess=True)
@@ -113,14 +144,25 @@ class AudioCluster():
         self.analyzeResults()
     
     def prepareAccumulatedMetrics(self):
+        """
+        After sufficient number of trials have been run
+        save cumulative results to CSV
+        """
         displayDF = analyzeMetricsDF(self.resultList)
         displayDF.to_csv("data/results.csv")
 
 if __name__ == "__main__":
+    # Init audio class
     AC = AudioCluster(processData=True)
+
+    # Run clustering algos on data and analyze results
     AC.processAndCluster()
     AC.analyzeResults()
-    for _ in range(15):
+
+    # Reapt steps arbitrary number of times
+    for _ in range(10):
         AC.reInitAndRun()
+    
+    # Evaluate experiments
     AC.prepareAccumulatedMetrics()
     

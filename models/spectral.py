@@ -1,6 +1,9 @@
 from sklearn.cluster import SpectralClustering
 
 class spectral():
+    """
+    https://scikit-learn.org/stable/modules/generated/sklearn.cluster.SpectralClustering.html#sklearn.cluster.SpectralClustering
+    """
     def __init__(self, k):
         self.model = SpectralClustering(n_clusters=k)
         self.name = "Spectral Clustering"
