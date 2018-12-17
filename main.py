@@ -170,7 +170,7 @@ if __name__ == "__main__":
     AC.processAndCluster()
     AC.analyzeResults()
 
-    # Reapt steps arbitrary number of times
+    # Reapt steps arbitrary number of times.
     for _ in range(numTrials):
         AC.reInitAndRun()
     
